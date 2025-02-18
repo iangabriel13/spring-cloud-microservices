@@ -24,6 +24,7 @@ spring:
     user: root
     password: admin123
     enabled: false
+    driver-class-name: com.mysql.cj.jdbc.Driver
   #zipkin:
     #base-url: http://localhost:9411/
 springdoc:

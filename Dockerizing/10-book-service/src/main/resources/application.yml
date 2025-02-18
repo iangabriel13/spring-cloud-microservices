@@ -43,6 +43,7 @@ spring:
     url: jdbc:mysql://localhost:3306/book_service?useMysqlMetadata=true
     user: root
     password: admin123
+    enabled: false
     driver-class-name: com.mysql.cj.jdbc.Driver
 springdoc:
   show-actuator: true

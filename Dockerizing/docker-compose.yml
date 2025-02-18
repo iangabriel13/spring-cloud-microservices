@@ -1,8 +1,22 @@
 version: '3.4'
 
+networks:
+  iannunes-network:
+    name: iannunes-network
+
 services:
+  rabbit-mq:
+    image: rabbitmq:3.8.14-management
+    container_name: rabbit-mq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - iannunes-network
+
   zipkin-server:
     image: openzipkin/zipkin:2.23.2
+    container_name: zipkin-server
     ports:
       - 9411:9411
     restart: always
@@ -11,18 +25,11 @@ services:
     environment:
       RABBIT_URI: amqp://guest:guest@rabbit-mq:5672
     networks:
-      - erudio-network
-
-  rabbit-mq:
-    image: rabbitmq:3.8.14-management
-    ports:
-      - 5672:5672
-      - 15672:15672
-    networks:
-      - erudio-network
+      - iannunes-network
 
   cambio-db:
     image: mysql:5.7.22
+    container_name: cambio-db
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -38,10 +45,11 @@ services:
     expose:
       - 3308
     networks:
-      - erudio-network
+      - iannunes-network
       
   book-db:
     image: mysql:5.7.22
+    container_name: book-db
     command: --default-authentication-plugin=mysql_native_password
     restart: always
     environment:
@@ -57,17 +65,19 @@ services:
     expose:
       - 3310
     networks:
-      - erudio-network
+      - iannunes-network
 
   naming-server:
-    image: leandrocgsi/naming-server:0.0.1-SNAPSHOT
+    image: iannunes/naming-server
+    container_name: naming-server
     ports:
       - 8761:8761
     networks:
-      - erudio-network
+      - iannunes-network
 
   api-gateway:
-    image: leandrocgsi/api-gateway:0.0.1-SNAPSHOT
+    image: iannunes/api-gateway
+    container_name: api-gateway
     ports:
       - 8765:8765
     depends_on:
@@ -76,14 +86,32 @@ services:
     environment:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
-      RABBIT_URI: amqp://guest:guest@rabbit-mq:5672
-      SPRING_RABBITMQ_HOST: rabbit-mq
-      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      MANAGEMENT.TRACING.SAMPLING.PROBABILITY: 1.0
+      MANAGEMENT.ZIPKIN.TRACING.ENDPOINT: http://localhost:9411/api/v2/spans
+      RABBIT.URI: amqp://guest:guest@rabbit-mq:5672
+      SPRING.ZIPKIN.SENDER.TYPE: rabbit
+      SPRING.RABBITMQ.HOST: rabbit-mq
+      SPRING.RABBITMQ.PORT: 5672
+      SPRING.RABBITMQ.USERNAME: guest
+      SPRING.RABBITMQ.PASSWORD: guest
+      SPRING.APPLICATION.NAME: api-gateway
+      SPRING.CLOUD.GATEWAY.DISCOVERY.LOCATOR.ENABLED: true
+      SPRING.CLOUD.GATEWAY.ROUTES[0].ID: cambio-service
+      SPRING.CLOUD.GATEWAY.ROUTES[0].URI: lb://cambio-service
+      SPRING.CLOUD.GATEWAY.ROUTES[0].PREDICATES[0]: Path=/cambio-service/**
+      SPRING.CLOUD.GATEWAY.ROUTES[1].ID: book-service
+      SPRING.CLOUD.GATEWAY.ROUTES[1].URI: lb://book-service
+      SPRING.CLOUD.GATEWAY.ROUTES[1].PREDICATES.0: Path=/book-service/**
+      SPRING.CLOUD.GATEWAY.ROUTES[2].ID: openapi
+      SPRING.CLOUD.GATEWAY.ROUTES[2].URI: lb://api-gateway
+      SPRING.CLOUD.GATEWAY.ROUTES[2].PREDICATES[0]: Path=/v3/api-docs/**
+      SPRING.CLOUD.GATEWAY.ROUTES[2].FILTERS[0]: RewritePath=/v3/api-docs/(?<path>.*), /$\{path}/v3/api-docs
     networks:
-      - erudio-network
+      - iannunes-network
 
   cambio-service:
-    image: leandrocgsi/cambio-service
+    image: iannunes/cambio-service
+    container_name: cambio-service
     restart: always
     build:
       context: .
@@ -92,11 +120,14 @@ services:
       TZ: America/Sao_Paulo
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
-      RABBIT_URI: amqp://guest:guest@rabbit-mq:5672
-      SPRING_RABBITMQ_HOST: rabbit-mq
-      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      RABBIT.URI: amqp://guest:guest@rabbit-mq:5672
+      SPRING.ZIPKIN.SENDER.TYPE: rabbit
+      SPRING.RABBITMQ.HOST: rabbit-mq
+      SPRING.RABBITMQ.PORT: 5672
+      SPRING.RABBITMQ.USERNAME: guest
+      SPRING.RABBITMQ.PASSWORD: guest
       SPRING.DATASOURCE.URL: jdbc:mysql://cambio-db:3308/cambio_service?useSSL=false&serverTimezone=UTC&enabledTLSProtocols=TLSv1.2
-      SPRING.DATASOURCE.USERNAME: root
+      SPRING.DATASOURCE.USERNAME: docker
       SPRING.DATASOURCE.PASSWORD: admin123
       SPRING.FLYWAY.URL: jdbc:mysql://cambio-db:3308/cambio_service?useSSL=false&serverTimezone=UTC&enabledTLSProtocols=TLSv1.2
       SPRING.FLYWAY.USER: root
@@ -108,10 +139,11 @@ services:
       - cambio-db
       - rabbit-mq
     networks:
-      - erudio-network
+      - iannunes-network
       
   book-service:
-    image: leandrocgsi/book-service
+    image: iannunes/book-service
+    container_name: book-service
     restart: always
     build:
       context: .
@@ -120,11 +152,14 @@ services:
       TZ: America/Sao_Paulo
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
       SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
-      RABBIT_URI: amqp://guest:guest@rabbit-mq:5672
-      SPRING_RABBITMQ_HOST: rabbit-mq
-      SPRING_ZIPKIN_SENDER_TYPE: rabbit
+      RABBIT.URI: amqp://guest:guest@rabbit-mq:5672
+      SPRING.ZIPKIN.SENDER.TYPE: rabbit
+      SPRING.RABBITMQ.HOST: rabbit-mq
+      SPRING.RABBITMQ.PORT: 5672
+      SPRING.RABBITMQ.USERNAME: guest
+      SPRING.RABBITMQ.PASSWORD: guest
       SPRING.DATASOURCE.URL: jdbc:mysql://book-db:3310/book_service?useSSL=false&serverTimezone=UTC&enabledTLSProtocols=TLSv1.2
-      SPRING.DATASOURCE.USERNAME: root
+      SPRING.DATASOURCE.USERNAME: docker
       SPRING.DATASOURCE.PASSWORD: admin123
       SPRING.FLYWAY.URL: jdbc:mysql://book-db:3310/book_service?useSSL=false&serverTimezone=UTC&enabledTLSProtocols=TLSv1.2
       SPRING.FLYWAY.USER: root
@@ -136,7 +171,4 @@ services:
       - book-db
       - rabbit-mq
     networks:
-      - erudio-network
-networks:
-  erudio-network:
-    driver: bridge
+      - iannunes-network

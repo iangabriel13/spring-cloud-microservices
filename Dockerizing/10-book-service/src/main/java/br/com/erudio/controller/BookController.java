@@ -30,11 +30,11 @@ public class BookController {
 	@Operation(summary = "Find a specific book by your ID")
 	@GetMapping(value = "/{id}/{currency}")	
 	public Book findBook(
-			@PathVariable("id") Long id,
-			@PathVariable("currency") String currency
+			@PathVariable String id,
+			@PathVariable String currency
 			) {
 		
-		var book = repository.getById(id);
+		var book = repository.findById(Long.valueOf(id)).orElse(new Book());
 		if (book == null) throw new RuntimeException("Book not Found");
 				
 		var cambio = proxy.getCambio(book.getPrice(), "USD", currency);

@@ -4,6 +4,10 @@ spring:
   application:
     name: naming-server
 eureka:
+  instance:
+    prefer-ip-address: true
+    hostname: 172.27.144.1
+    instance-id: ${spring.application.name}:${server.port}
   client:
     register-with-eureka: false
     fetch-registry: false

@@ -1,5 +1,5 @@
-FROM openjdk:16-jdk-slim
-ARG JAR_FILE=10-book-service/target/*.jar
-COPY ${JAR_FILE} app.jar
-RUN bash -c 'touch /app.jar'
-ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-jar","/app.jar"]
+FROM openjdk:23-jdk-slim
+ARG JAR_FILE=target/*.jar
+COPY ${JAR_FILE} bookApp.jar
+RUN bash -c 'touch /bookApp.jar'
+ENTRYPOINT ["java","-Djava.security.egd=file:/dev/./urandom","-jar","/bookApp.jar"]

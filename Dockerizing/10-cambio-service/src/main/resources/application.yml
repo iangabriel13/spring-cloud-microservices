@@ -27,9 +27,15 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   #zipkin:
     #base-url: http://localhost:9411/
+
 springdoc:
+  show-actuator: true
   api-docs:
     path: cambio-service/v3/api-docs
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 management:
   tracing:
     sampling:

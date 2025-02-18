@@ -45,10 +45,15 @@ spring:
     password: admin123
     enabled: false
     driver-class-name: com.mysql.cj.jdbc.Driver
+
 springdoc:
   show-actuator: true
   api-docs:
     path: book-service/v3/api-docs
+    enabled: true
+  swagger-ui:
+    enabled: true
+
 management:
   tracing:
     sampling:

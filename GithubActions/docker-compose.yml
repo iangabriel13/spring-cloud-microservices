@@ -4,13 +4,18 @@ networks:
 
 services:
   rabbit-mq:
-    image: rabbitmq:4.0-management
+    image: rabbitmq:3.12-management
     container_name: rabbit-mq
     ports:
       - 5672:5672
       - 15672:15672
     networks:
       - iannunes-network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   zipkin-server:
     image: openzipkin/zipkin:3.4.4
@@ -19,7 +24,8 @@ services:
       - 9411:9411
     restart: always
     depends_on:
-      - rabbit-mq
+      rabbit-mq:
+        condition: service_healthy
     environment:
       RABBIT_URI: amqp://guest:guest@rabbit-mq:5672
     networks:
@@ -83,15 +89,17 @@ services:
       - rabbit-mq
     environment:
       EUREKA.CLIENT.SERVICEURL.DEFAULTZONE: http://naming-server:8761/eureka
-      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
-      MANAGEMENT.TRACING.SAMPLING.PROBABILITY: 1.0
-      MANAGEMENT.ZIPKIN.TRACING.ENDPOINT: http://localhost:9411/api/v2/spans
-      RABBIT.URI: amqp://guest:guest@rabbit-mq:5672
-      SPRING.ZIPKIN.SENDER.TYPE: rabbit
+      MICROMETER.TRACING.SENDER.TYPE: rabbit
+      MICROMETER.TRACING.EXPORTER.ZIPKIN.ENABLED: true
+      MICROMETER.TRACING.EXPORTER.ZIPKIN.URL: http://zipkin-server:9411/api/v2/spans
       SPRING.RABBITMQ.HOST: rabbit-mq
       SPRING.RABBITMQ.PORT: 5672
       SPRING.RABBITMQ.USERNAME: guest
       SPRING.RABBITMQ.PASSWORD: guest
+      SPRING.RABBITMQ.ADDRESSES: amqp://guest:guest@rabbit-mq:5672
+      MANAGEMENT.TRACING.SAMPLING.PROBABILITY: 1.0
+      MANAGEMENT.TRACING.ENABLED: true
+      SPRING.ZIPKIN.BASEURL: http://zipkin-server:9411/
       SPRING.APPLICATION.NAME: api-gateway
       SPRING.CLOUD.GATEWAY.DISCOVERY.LOCATOR.ENABLED: true
       SPRING.CLOUD.GATEWAY.ROUTES[0].ID: cambio-service
